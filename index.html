@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>声乐试听课课时规划器</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: #f5f5f7; color: #2b2b3a;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, sans-serif;
+    padding-bottom: 90px;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 10; background: #2b2b3a; color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+  }
+  .topbar .t { font-size: 17px; font-weight: 700; }
+  .topbar .his { font-size: 13px; color: #aab6ff; }
+  .wrap { padding: 12px; }
+  .progress {
+    background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; color: #666;
+  }
+  .progress b { color: #4a6cf7; }
+  .bar { margin-top: 8px; height: 8px; background: #eee; border-radius: 8px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#6a8dff,#4a6cf7); border-radius: 8px; transition: width .25s; }
+  .card { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .qhead { display: flex; align-items: center; margin-bottom: 10px; }
+  .qno { width: 24px; height: 24px; line-height: 24px; text-align: center; background: #2b2b3a; color: #fff; border-radius: 50%; font-size: 13px; margin-right: 8px; flex: none; }
+  .qtitle { font-size: 15px; font-weight: 600; flex: 1; }
+  .qtag { font-size: 11px; color: #999; border: 1px solid #ddd; border-radius: 6px; padding: 1px 7px; flex: none; margin-left: 6px; }
+  .opts { display: flex; flex-wrap: wrap; }
+  .opt {
+    font-size: 14px; color: #444; background: #f4f5f8; border: 1.5px solid #f4f5f8;
+    border-radius: 9px; padding: 9px 12px; margin: 0 8px 8px 0; line-height: 1.3; cursor: pointer;
+  }
+  .opt.on { background: #eaf0ff; border-color: #4a6cf7; color: #2b4bb0; font-weight: 600; }
+  .opt.dis { opacity: .4; }
+  .hint { font-size: 11px; color: #c08a3e; margin-top: 2px; }
+  .footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; gap: 10px; padding: 10px 12px; background: #fff;
+    box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+  }
+  .footer button {
+    flex: 1; font-size: 15px; border: none; border-radius: 10px; padding: 12px 0; font-weight: 600;
+  }
+  .btn-reset { background: #f1f1f4; color: #555; width: 90px; flex: none; }
+  .btn-gen { background: #c7cbd6; color: #fff; }
+  .btn-gen.on { background: linear-gradient(90deg,#5a7bff,#4a6cf7); }
+
+  /* 报告 */
+  #report { display: none; padding: 12px; }
+  .badge { display: inline-block; background: #eaf0ff; color: #2b4bb0; font-size: 13px; padding: 6px 14px; border-radius: 20px; margin-bottom: 10px; }
+  .badge b { font-size: 15px; }
+  .badge .tip { color: #c08a3e; font-size: 11px; margin-left: 5px; }
+  .report { background: #fff; border-radius: 14px; padding: 18px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .sp { height: 9px; }
+  .title { font-size: 20px; font-weight: 700; text-align: center; margin: 4px 0 10px; }
+  .h2 { font-size: 17px; font-weight: 700; margin: 16px 0 6px; }
+  .h3 { font-size: 15px; font-weight: 700; color: #2b4bb0; margin: 12px 0 4px; }
+  .glabel { font-size: 14px; font-weight: 700; color: #4a6cf7; margin: 9px 0 3px; }
+  .bullet { font-size: 14px; color: #333; line-height: 1.55; display: flex; }
+  .bullet .d { color: #4a6cf7; margin-right: 6px; flex: none; }
+  .bullet .x { flex: 1; }
+  .sub { font-size: 13px; color: #666; line-height: 1.55; padding-left: 22px; }
+  .check { font-size: 14px; color: #2e7d32; font-weight: 600; line-height: 1.55; margin: 4px 0; }
+  .warn { font-size: 14px; color: #c0392b; font-weight: 600; line-height: 1.55; margin: 7px 0; }
+  .txt { font-size: 14px; color: #333; line-height: 1.55; }
+  .rfoot { position: fixed; left:0; right:0; bottom:0; z-index:20; display:flex; gap:8px; padding:10px 12px; background:#fff; box-shadow:0 -2px 8px rgba(0,0,0,.06); }
+  .rfoot button { flex:1; font-size:13px; border:none; border-radius:10px; padding:11px 0; font-weight:600; }
+  .rfoot .g { background:#f1f1f4; color:#444; }
+  .rfoot .p { background:linear-gradient(90deg,#5a7bff,#4a6cf7); color:#fff; }
+
+  /* 弹层 */
+  .mask { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .mask.show { display: flex; }
+  .sheet { background: #fff; border-radius: 14px; width: 100%; max-width: 380px; max-height: 84vh; overflow: auto; padding: 14px; }
+  .sheet h3 { margin: 0 0 10px; font-size: 16px; }
+  .sheet img { width: 100%; border-radius: 8px; }
+  .sheet .ph { font-size: 12px; color: #999; text-align: center; margin: 8px 0; }
+  .sheet .close { margin-top: 8px; width: 100%; border: none; background: #f1f1f4; color: #444; border-radius: 10px; padding: 11px 0; font-size: 14px; }
+  .hist-item { border-bottom: 1px solid #f0f0f0; padding: 11px 4px; display: flex; align-items: center; justify-content: space-between; }
+  .hist-item .l .d { font-size: 14px; font-weight: 600; }
+  .hist-item .l .t { font-size: 11px; color: #999; margin-top: 3px; }
+  .hist-item .r { font-size: 12px; color: #4a6cf7; }
+  .toast { position: fixed; left: 50%; top: 40%; transform: translateX(-50%); background: rgba(0,0,0,.8); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; z-index: 99; display: none; }
+
+  /* AI 设置 */
+  .ai { font-size: 13px; color: #aab6ff; margin-left: 10px; }
+  .set-row { margin: 12px 0; }
+  .set-row label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; }
+  .set-row input, .set-row select { width: 100%; box-sizing: border-box; font-size: 14px; padding: 9px 10px; border: 1px solid #ddd; border-radius: 9px; background: #fafbff; }
+  .set-row .hint2 { font-size: 11px; color: #999; margin-top: 4px; line-height: 1.5; }
+  .set-toggle { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 2px; }
+  .set-toggle .lbl { font-size: 14px; font-weight: 600; }
+  .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 26px; transition: .2s; }
+  .slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+  .switch input:checked + .slider { background: #4a6cf7; }
+  .switch input:checked + .slider:before { transform: translateX(20px); }
+  .badge .ai { color: #4a6cf7; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="t">声乐试听课课时规划器</div>
+  <div style="display:flex; align-items:center;">
+    <div class="ai" id="aiBtn">AI</div>
+    <div class="his" id="histBtn">历史</div>
+  </div>
+</div>
+
+<div id="formView">
+  <div class="wrap">
+    <div class="progress">
+      已作答 <b id="cnt">0</b> / <span id="tot">16</span>
+      <div class="bar"><i id="fill" style="width:0%"></i></div>
+    </div>
+    <div id="questions"></div>
+  </div>
+  <div class="footer">
+    <button class="btn-reset" id="resetBtn">重置</button>
+    <button class="btn-gen" id="genBtn">生成方案</button>
+  </div>
+</div>
+
+<div id="report">
+  <div class="badge">总课时 <b id="pkg">—</b><span class="tip" id="pkgTip"></span></div>
+  <div class="report" id="reportBody"></div>
+  <div class="rfoot">
+    <button class="g" id="redoBtn">重新评估</button>
+    <button class="g" id="copyBtn">复制文本</button>
+    <button class="g" id="imgBtn">生成图片</button>
+    <button class="p" id="shareBtn">转发</button>
+  </div>
+</div>
+
+<div class="mask" id="imgMask">
+  <div class="sheet">
+    <h3>课时规划方案（长图）</h3>
+    <img id="imgEl" alt="report" />
+    <div class="ph">手机端：长按上方图片即可保存 / 转发；电脑端：点下方按钮下载</div>
+    <button class="close" id="imgDown">下载图片</button>
+    <button class="close" id="imgClose" style="background:#f1f1f4;">关闭</button>
+  </div>
+</div>
+
+<div class="mask" id="histMask">
+  <div class="sheet">
+    <h3>历史方案</h3>
+    <div id="histList"></div>
+    <button class="close" id="histClose">关闭</button>
+  </div>
+</div>
+
+<div class="mask" id="aiMask">
+  <div class="sheet">
+    <h3>AI 增强设置</h3>
+    <div class="set-toggle">
+      <span class="lbl">启用 AI 增强</span>
+      <label class="switch"><input type="checkbox" id="aiEnabled" /><span class="slider"></span></label>
+    </div>
+    <div class="set-row">
+      <label>服务商（预设接口地址）</label>
+      <select id="aiProvider">
+        <option value="openrouter">OpenRouter（推荐，免费/廉价模型多）</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="openai">OpenAI</option>
+        <option value="custom">自定义</option>
+      </select>
+    </div>
+    <div class="set-row">
+      <label>API Key</label>
+      <input type="password" id="aiKey" placeholder="粘贴你的密钥，仅保存在本机浏览器" autocomplete="off" />
+    </div>
+    <div class="set-row">
+      <label>模型名</label>
+      <input type="text" id="aiModel" placeholder="如 deepseek/deepseek-chat" autocomplete="off" />
+    </div>
+    <div class="set-row">
+      <label>接口地址（自定义时填写）</label>
+      <input type="text" id="aiBase" placeholder="https://.../v1" autocomplete="off" />
+    </div>
+    <div class="hint2 set-row">开启后，生成方案会调用大模型给出「个性化点评 + 课时依据」，并以规则引擎为保底。浏览器直连可能受跨域限制；若调用失败（多为跨域或密钥问题），会自动退回智能规则模式，不影响使用。密钥仅存于本机浏览器 localStorage，不会上传到任何第三方。</div>
+    <button class="close" id="aiSave" style="background:linear-gradient(90deg,#5a7bff,#4a6cf7); color:#fff;">保存</button>
+    <button class="close" id="aiClose" style="background:#f1f1f4;">关闭</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ====================== 数据 ======================
+const QUESTIONS = [
+  { id:'Q1', title:'学习种类（方向）', type:'single', options:[
+    {key:'A',text:'流行演唱'},{key:'B',text:'美声演唱'},{key:'C',text:'民族演唱'}] },
+  { id:'Q2', title:'学生年龄段', type:'single', options:[
+    {key:'A',text:'儿童（12岁以下）'},{key:'B',text:'青少年（13-17岁）'},{key:'C',text:'青年（18-35岁）'},
+    {key:'D',text:'中年（36-55岁）'},{key:'E',text:'中老年（56岁以上）'}] },
+  { id:'Q3', title:'声乐基础', type:'single', options:[
+    {key:'A',text:'零基础，从未学过'},{key:'B',text:'自学过一些，没有系统训练'},
+    {key:'C',text:'跟老师系统学过1年以内'},{key:'D',text:'跟老师系统学过1年以上'},
+    {key:'E',text:'有专业背景（音乐院校在读/毕业）'}] },
+  { id:'Q4', title:'学习目标', type:'single', options:[
+    {key:'A',text:'兴趣爱好，能唱喜欢的歌'},{key:'B',text:'短期有表演需求（年会/婚礼/比赛）'},
+    {key:'C',text:'系统提升，长期进步'},{key:'D',text:'以专业方向为目标（艺考/音乐院校）'}] },
+  { id:'Q5', title:'气息', type:'multi', exclusiveKey:'A', options:[
+    {key:'A',text:'呼吸方式正确，无明显问题'},{key:'B',text:'吸气浅（锁骨呼吸，肩膀上提）'},
+    {key:'C',text:'气息支撑不稳（句尾发虚、声音发抖）'},{key:'D',text:'气息与发声连接不畅（声音与气息脱节）'}] },
+  { id:'Q6', title:'发声位置', type:'multi', exclusiveKey:'A', options:[
+    {key:'A',text:'整体正常'},{key:'B',text:'发声位置靠前（声音扁、白）'},
+    {key:'C',text:'发声位置靠后（声音闷、暗）'},{key:'D',text:'喉位不稳定（高音时喉头上提）'}] },
+  { id:'Q7', title:'换声区', type:'multi', exclusiveKey:'A', options:[
+    {key:'A',text:'正常或无问题'},{key:'B',text:'换声点有明显断层（真声假声切换时“裂开”）'},
+    {key:'C',text:'高音挤卡（高音用喉咙硬“够”）'},{key:'D',text:'换声区音色不统一（真声区与假声区音色差异太大）'}] },
+  { id:'Q8', title:'音准', type:'single', options:[
+    {key:'A',text:'音准良好，无明显问题'},{key:'B',text:'偶有偏差（大跳或变化音不够准）'},
+    {key:'C',text:'整体音准偏差（唱准旋律有明显困难）'}] },
+  { id:'Q9', title:'节奏', type:'single', options:[
+    {key:'A',text:'节奏感良好'},{key:'B',text:'偶有抢拍或拖拍'},
+    {key:'C',text:'整体节奏不稳定（无法稳定跟节拍器）'}] },
+  { id:'Q10', title:'咬字', type:'multi', exclusiveKey:'A', options:[
+    {key:'A',text:'咬字清晰自然'},{key:'B',text:'元音不纯或变形'},
+    {key:'C',text:'辅音含糊或咬字位置靠后'}] },
+  { id:'Q11', title:'嗓音条件评估', type:'single', options:[
+    {key:'A',text:'嗓音条件良好（有天然共鸣、音色优势）'},{key:'B',text:'嗓音条件一般'},
+    {key:'C',text:'有明显损伤或用嗓疲劳'}] },
+  { id:'Q12', title:'整体表现力', type:'single', options:[
+    {key:'A',text:'有基本情感表达'},{key:'B',text:'演唱平淡，缺乏起伏'},
+    {key:'C',text:'有明显舞台张力或表现力优势'}] },
+  { id:'Q13', title:'每周可上课次数', type:'single', options:[
+    {key:'A',text:'每周1节'},{key:'B',text:'每周2节'},{key:'C',text:'每周3节或以上'}] },
+  { id:'Q14', title:'课后可练习时间', type:'single', options:[
+    {key:'A',text:'有，每天可练15-20分钟'},{key:'B',text:'有，每周可练2-3次'},{key:'C',text:'基本没有'}] },
+  { id:'Q15', title:'歌曲风格偏好', type:'multi', options:[
+    {key:'A',text:'经典老歌/华语流行'},{key:'B',text:'当代流行/抒情'},{key:'C',text:'民谣'},
+    {key:'D',text:'中国艺术歌曲/民歌'},{key:'E',text:'外国歌剧咏叹调/艺术歌曲'},
+    {key:'F',text:'音乐剧'},{key:'G',text:'R&B/Soul'},{key:'H',text:'不确定/让老师推荐'}] },
+  { id:'Q16', title:'单节课时长', type:'single', options:[
+    {key:'A',text:'45分钟'},{key:'B',text:'60分钟（1小时）'}] }
+];
+
+const REPERTOIRE = {
+  A: { A:['月亮代表我的心','恰似你的温柔','城里的月光'], B:['小幸运','后来','说散就散','温柔'],
+    C:['成都','南山南','理想三旬'], D:['茉莉花（流行改编版）','草原上升起不落的太阳'],
+    E:['Time to Say Goodbye（流行跨界版）'], F:['Memory','Defying Gravity（简化版）'],
+    G:['烧','红色高跟鞋','Lost Stars'], H:['月亮代表我的心','后来','成都'] },
+  B: { A:['我亲爱的（Caro mio ben）','阿玛丽莉（Amarilli）'], B:['我亲爱的','绿树成荫'],
+    C:['牧歌'], D:['茉莉花','红豆词','问'], E:['今夜无人入睡（Nessun Dorma）','月亮颂（Rusalka）','魔王（Erlkönig）'],
+    F:['Think of Me','Memory'], G:['Ave Maria（流行美声版）'], H:['我亲爱的','阿玛丽莉','茉莉花'] },
+  C: { A:['茉莉花','小河淌水'], B:['青花瓷','枉凝眉'], C:['康定情歌','龙船调'],
+    D:['茉莉花','绣红旗','山丹丹开花红艳艳','唱支山歌给党听'], E:['帕米尔，我的家乡多么美','科学的春天来到了'],
+    F:['五哥放羊（音乐剧选段）'], G:['山路十八弯'], H:['茉莉花','小河淌水','龙船调'] }
+};
+function getRecommendationGroups(direction, styles, styleTextMap){
+  const map = REPERTOIRE[direction] || {}; const groups=[]; const used={};
+  const list = (styles && styles.length) ? styles.slice() : ['H'];
+  list.forEach(function(k){
+    let songs = (k==='H') ? (map['H']||[]) : (map[k]||[]);
+    if(!songs || !songs.length) return;
+    const label = (k==='H') ? '老师推荐（综合）' : (styleTextMap[k]||('风格'+k));
+    if(!used[label]){ used[label]=true; groups.push({label:label, songs:[]}); }
+    const g = groups[groups.length-1];
+    songs.forEach(function(s){ if(g.songs.indexOf(s)<0) g.songs.push(s); });
+  });
+  if(groups.length===0) groups.push({label:'老师推荐（综合）', songs: map['H']||[]});
+  return groups;
+}
+
+// ====================== 逻辑 ======================
+function getOptionText(qid,key){ const q=QUESTIONS.find(x=>x.id===qid); if(!q) return ''; const o=q.options.find(op=>op.key===key); return o?o.text:''; }
+function selTexts(qid,sel){
+  const q=QUESTIONS.find(x=>x.id===qid); if(!q) return '—';
+  if(Array.isArray(sel)){ if(!sel||sel.length===0) return '无明显问题'; return sel.map(k=>getOptionText(qid,k)).filter(Boolean).join('、'); }
+  return sel ? getOptionText(qid,sel) : '—';
+}
+function noIssue(sel,keys){ if(!sel||sel.length===0) return true; return keys.every(k=>sel.indexOf(k)<0); }
+function issueIn(sel,keys){ if(!sel||sel.length===0) return false; return keys.some(k=>sel.indexOf(k)>=0); }
+
+function determineBase(ans){
+  const Q1=ans.Q1,Q3=ans.Q3,Q4=ans.Q4,Q5=ans.Q5||[],Q7=ans.Q7||[],Q10=ans.Q10||[],Q8=ans.Q8,Q9=ans.Q9,Q12=ans.Q12,Q13=ans.Q13,Q14=ans.Q14;
+  const no5=noIssue(Q5,['B','C','D']), no7=noIssue(Q7,['B','C','D']);
+  const iss5bc=issueIn(Q5,['B','C']), iss5bcd=issueIn(Q5,['B','C','D']);
+  const iss7bc=issueIn(Q7,['B','C']), iss7bcd=issueIn(Q7,['B','C','D']);
+  if(Q4==='A'&&Q1==='A'&&Q3==='D'&&Q12==='C'&&no5&&no7&&Q13==='A'&&Q14==='A') return '5节';
+  if(Q4==='A'&&Q3==='D'&&no5&&no7&&Q12==='C'&&Q8==='A'&&Q9==='A'&&Q13==='A'&&Q14==='A') return '5节';
+  if(Q4==='B'&&Q3==='C'&&no7&&no5&&Q8==='A'&&Q9==='A'&&Q13==='A') return '5节';
+  if(Q4==='A'&&Q3==='A'&&iss5bc&&no7&&Q13==='A'&&Q14==='A') return '10节';
+  if(Q4==='A'&&Q3==='B'&&iss5bc&&Q13==='A'&&Q14==='A') return '10节';
+  if(Q4==='C'&&Q3==='C'&&no7&&no5&&Q13==='A'&&Q14==='A') return '10节';
+  if(Q4==='C'&&Q3==='D'&&no5&&iss7bc&&Q13==='A'&&Q14==='A') return '10节';
+  if(Q4==='A'&&Q3==='A'&&iss5bc&&iss7bc&&Q13==='A'&&Q14==='A') return '15节';
+  if(Q4==='C'&&Q3==='B'&&iss5bc&&iss7bc&&Q13==='A'&&Q14==='A') return '15节';
+  if(Q14==='B'&&Q4==='C'&&iss7bc&&iss5bc&&Q13==='A') return '15节';
+  if(Q4==='C'&&Q3==='A'&&iss5bc&&iss7bc&&Q13==='A'&&Q14==='A') return '20节';
+  if(Q4==='C'&&Q3==='B'&&iss5bc&&iss7bc&&Q13==='A'&&Q14==='B') return '20节';
+  if(Q4==='D'&&Q1==='A'&&Q3==='C'&&iss7bc&&Q13==='B'&&Q14==='A') return '20节';
+  if(Q4==='D'&&Q1==='B'&&Q3==='C'&&iss7bc&&iss5bcd&&Q13==='B'&&Q14==='A') return '30节';
+  if(Q4==='D'&&Q1==='B'&&Q3==='A'&&Q13==='B'&&Q14==='A') return '50节';
+  if(Q4==='D'&&Q1==='B'&&Q3==='A'&&Q13==='C'&&Q14==='A') return '50节';
+  if(Q4==='D'&&Q3==='A'&&(Q1==='B'||Q1==='C')&&Q13==='B'&&Q14==='A') return '50节';
+  return null;
+}
+function smartFloor(ans){
+  const Q1=ans.Q1,Q3=ans.Q3,Q4=ans.Q4,Q5=ans.Q5||[],Q6=ans.Q6||[],Q7=ans.Q7||[],Q10=ans.Q10||[],Q8=ans.Q8,Q9=ans.Q9,Q11=ans.Q11;
+  const breath=issueIn(Q5,['B','C','D']), pitch=(Q8==='B'||Q8==='C'), pitchBad=(Q8==='C');
+  const rhythmBad=(Q9==='C'), reg=issueIn(Q7,['B','C','D']), pos=issueIn(Q6,['B','C','D']);
+  const voiceDamage=(Q11==='C'), goalPro=(Q4==='D'), goalSys=(Q4==='C');
+  let floor=0; const reasons=[];
+  if(pitch&&breath){ floor=Math.max(floor,10); reasons.push('音准和气息需要同时打基础'); }
+  if(rhythmBad&&breath){ floor=Math.max(floor,10); reasons.push('节奏不稳再加上气息支撑不够'); }
+  if(reg&&pitch){ floor=Math.max(floor,10); reasons.push('换声区和音准都需要花时间统一'); }
+  if(pos&&breath){ floor=Math.max(floor,10); reasons.push('发声位置和气息支撑要一起调整'); }
+  if(voiceDamage){ floor=Math.max(floor,10); reasons.push('嗓音状态需要先修复再练声'); }
+  if(pitchBad&&(goalSys||goalPro)){ floor=Math.max(floor,20); reasons.push('音准整体偏差且目标是系统/专业方向'); }
+  if(goalPro&&reg){ floor=Math.max(floor,20); reasons.push('专业方向且换声区还需要打磨'); }
+  if(goalPro&&Q3==='A'){ floor=Math.max(floor,50); reasons.push('零基础走专业方向需要长期积累'); }
+  return { num:floor, reasons:reasons };
+}
+// 课时包只卖 5/10/20/50 四档，任何计算结果向上吸附到最近档
+const PKG_TIERS=[5,10,20,50];
+function snapPackage(n){ for(let i=0;i<PKG_TIERS.length;i++){ if(PKG_TIERS[i]>=n) return PKG_TIERS[i]; } return PKG_TIERS[PKG_TIERS.length-1]; }
+function computePackage(ans){
+  let base=determineBase(ans); let isDefault=false;
+  if(base===null){ base='10节'; isDefault=true; }
+  let num=parseInt(base,10);
+  if(ans.Q14==='C'){
+    if(num<=15 && (ans.Q4==='C'||ans.Q4==='D')) num+=5;
+    else if(num===20 && ans.Q4==='D') num=30;
+  }
+  const sf=smartFloor(ans); let smartRaised=false, smartNote='';
+  if(sf.num>num){ num=sf.num; smartRaised=true; smartNote='课堂上看到你'+sf.reasons.join('、')+'，所以调整为 '+num+' 节课，节奏会更合适。'; }
+  num=snapPackage(num);
+  return { label:num+'节', num:num, isDefault:isDefault, smartRaised:smartRaised, smartNote:smartNote };
+}
+const DIR_TEXT={ A:'流行唱法核心训练包括：建立气息支撑与自然发声位置，通过元音统一与换声区滑音训练，形成自然、有辨识度的流行音色。注重“像说话一样唱歌”的自然语感与情感表达。',
+  B:'美声唱法核心训练包括：建立稳定的气息支撑与腔体通道感，通过元音统一训练、换声区平滑过渡和共鸣位置的稳定，逐步建立圆润通透的美声音色。同时注重规范的咬字与语言训练。',
+  C:'民族唱法核心训练包括：建立气息支撑与位置感，通过咬字与发声位置训练，形成明亮通透的民族音色。注重字正腔圆与风格的准确表达。' };
+const P1={A:'流行强调自然说话发声',B:'美声强调通道感建立',C:'民族强调咬字位置'};
+const P2={A:'流行强调自然语感与混声连接',B:'美声强调通道感与共鸣稳定',C:'民族强调咬字与韵味'};
+const P3={A:'流行强调语气与律动',B:'美声强调作品风格把握',C:'民族强调韵味与风格'};
+const TONE={A:'自然、有辨识度的流行音色',B:'圆润通透的美声音色',C:'明亮通透的民族音色'};
+
+function buildReport(ans, opt){
+  const pkg=computePackage(ans);
+  const total=(opt&&opt.total)? opt.total : pkg.num;
+  const pkgLabel=(opt&&opt.total)? opt.total+'节' : pkg.label;
+  const Q1=ans.Q1, Q14=ans.Q14;
+  const styleTextMap={}; QUESTIONS[14].options.forEach(o=>styleTextMap[o.key]=o.text);
+  const L=[];
+  L.push('课时规划方案'); L.push('');
+  L.push('## 学生情况摘要');
+  L.push('- 学习方向：'+selTexts('Q1',ans.Q1));
+  L.push('- 年龄段：'+selTexts('Q2',ans.Q2));
+  L.push('- 声乐基础：'+selTexts('Q3',ans.Q3));
+  L.push('- 学习目标：'+selTexts('Q4',ans.Q4));
+  L.push('- 核心问题：');
+  L.push('  - 气息：'+selTexts('Q5',ans.Q5));
+  L.push('  - 发声位置：'+selTexts('Q6',ans.Q6));
+  L.push('  - 换声区：'+selTexts('Q7',ans.Q7));
+  L.push('  - 音准：'+selTexts('Q8',ans.Q8));
+  L.push('  - 节奏：'+selTexts('Q9',ans.Q9));
+  L.push('  - 咬字：'+selTexts('Q10',ans.Q10));
+  L.push('  - 嗓音条件：'+selTexts('Q11',ans.Q11));
+  L.push('  - 表现力：'+selTexts('Q12',ans.Q12));
+  L.push('- 上课频率：'+selTexts('Q13',ans.Q13));
+  L.push('- 课后练习：'+selTexts('Q14',ans.Q14));
+  L.push('- 风格偏好：'+selTexts('Q15',ans.Q15));
+  L.push('');
+  L.push('📚 总课时：'+total+'节（每节'+selTexts('Q16',ans.Q16)+'）'); L.push('');
+  L.push('## 教学重点方向'); L.push(''); L.push(DIR_TEXT[Q1]); L.push('');
+  L.push('## 阶段规划'); L.push(''); L.push('根据'+total+'节课的安排，建议分为以下阶段推进：'); L.push('');
+  L.push('### 第一阶段（第1-4节）：气息与发声基础');
+  L.push('- 核心目标：建立气息支撑与中声区稳定'); L.push('- 具体内容：');
+  L.push('  - 腹式呼吸建立与稳定'); L.push('  - 叹气发声与u音长音'); L.push('  - 中声区音阶与元音统一');
+  L.push('  - '+P1[Q1]); L.push('- 预期效果：能稳定运用腹式呼吸发声，中声区不虚不喊'); L.push('');
+  if(total>=10){ L.push('### 第二阶段（第5-8节）：声音连接与统一');
+    L.push('- 核心目标：换声区平滑过渡，音色统一'); L.push('- 具体内容：');
+    L.push('  - 哼鸣位置建立与稳定'); L.push('  - 换声区滑音训练'); L.push('  - 高音减力训练');
+    L.push('  - '+P2[Q1]); L.push('- 预期效果：高音顺滑不挤，换声区无明显断层'); L.push(''); }
+  if(total>=15){ L.push('### 第三阶段（第9-'+total+'节）：歌曲处理与表达');
+    L.push('- 核心目标：把技术运用到歌曲中'); L.push('- 具体内容：');
+    L.push('  - 歌曲逐句处理'); L.push('  - 强弱对比与呼吸控制'); L.push('  - 咬字与情感表达');
+    L.push('  - '+P3[Q1]); L.push('- 预期效果：能完整演唱一首歌曲，有基本表现力'); L.push(''); }
+  if(total>=30){ L.push('### 第四阶段（第'+(total-10)+'-'+total+'节）：精进与舞台表现');
+    L.push('- 核心目标：精细打磨与艺术表现'); L.push('- 具体内容：');
+    L.push('  - 作品深度解析'); L.push('  - 舞台表现力训练'); L.push('  - 完整作品呈现');
+    L.push('- 预期效果：能独立完成高质量舞台表演'); L.push(''); }
+  L.push('## 课后练习建议'); L.push('');
+  if(Q14==='A') L.push('每天10-15分钟：呼吸练习3分钟 → u音哼唱5分钟 → 歌曲片段练习5分钟');
+  else if(Q14==='B') L.push('每周2-3次，每次15分钟：呼吸练习 → 哼鸣 → 歌曲片段');
+  else L.push('课上完成主要训练，课后以听歌、熟悉旋律和感受作品为主，不安排强制练习');
+  L.push('');
+  L.push('## 推荐曲目'); L.push('');
+  const groups=getRecommendationGroups(Q1,ans.Q15,styleTextMap);
+  groups.forEach(function(g){ L.push('【'+g.label+'】'); g.songs.forEach(s=>L.push('- '+s)); L.push(''); });
+  L.push('## 预期效果'); L.push('');
+  L.push('顺利完成'+total+'节课后，学生能够：');
+  L.push('✅ 稳定运用气息支撑发声'); L.push('✅ 高音自然顺畅，换声区无明显断层');
+  L.push('✅ '+TONE[Q1]); L.push('✅ 完整演唱一首歌曲，有基本表现力');
+  if(ans.Q11==='C'){ L.push(''); L.push('⚠️ 该学员存在明显用嗓疲劳或声带不适，建议优先进行声带修复训练，在恢复健康发声状态后再进入常规训练。'); }
+  if(Q14==='C'&&total>=20){ const fm={A:1,B:2,C:3}; const freq=fm[ans.Q13]||1; const weeks=Math.ceil(total/freq);
+    L.push(''); L.push('预计完成周期：约'+weeks+'周。由于课后练习时间较少，进度可能相对延长，建议在课上充分利用时间进行训练。'); }
+  if(pkg.smartRaised){ L.push(''); L.push(pkg.smartNote); }
+  if(pkg.isDefault){ L.push(''); L.push('（此方案为基准建议，可根据实际情况调整）'); }
+  return { total:total, pkgLabel:pkgLabel, isDefault:pkg.isDefault, smartRaised:pkg.smartRaised, smartNote:pkg.smartNote, plainText:L.join('\n') };
+}
+
+function parseBlocks(text){
+  return text.split('\n').map(function(raw){
+    if(raw==='') return {type:'space'};
+    if(raw==='课时规划方案') return {type:'title',text:raw};
+    if(raw.indexOf('## ')===0) return {type:'h2',text:raw.slice(3)};
+    if(raw.indexOf('### ')===0) return {type:'h3',text:raw.slice(4)};
+    if(raw.indexOf('【')===0) return {type:'glabel',text:raw};
+    if(raw.indexOf('✅')===0) return {type:'check',text:raw};
+    if(raw.indexOf('⚠️')===0) return {type:'warn',text:raw};
+    if(raw.indexOf('  - ')===0) return {type:'sub',text:raw.slice(4)};
+    if(raw.indexOf('- ')===0) return {type:'bullet',text:raw.slice(2)};
+    return {type:'txt',text:raw};
+  });
+}
+
+// ====================== 状态与交互 ======================
+let answers = {};
+let current = null;
+function initAnswers(){ const a={}; QUESTIONS.forEach(q=>a[q.id]=(q.type==='multi')?[]:''); return a; }
+answers = initAnswers();
+
+function renderQuestions(){
+  const box=document.getElementById('questions'); box.innerHTML='';
+  QUESTIONS.forEach(function(q,idx){
+    const card=document.createElement('div'); card.className='card';
+    const head=document.createElement('div'); head.className='qhead';
+    head.innerHTML='<span class="qno">'+(idx+1)+'</span><span class="qtitle">'+q.title+'</span><span class="qtag">'+(q.type==='multi'?'多选':'单选')+'</span>';
+    card.appendChild(head);
+    const opts=document.createElement('div'); opts.className='opts';
+    q.options.forEach(function(op){
+      const el=document.createElement('div');
+      const on = (q.type==='multi') ? (answers[q.id].indexOf(op.key)>=0) : (answers[q.id]===op.key);
+      el.className='opt'+(on?' on':'');
+      el.textContent=op.text;
+      el.onclick=function(){ tap(q,op.key); };
+      opts.appendChild(el);
+    });
+    card.appendChild(opts);
+    box.appendChild(card);
+  });
+}
+
+function tap(q,key){
+  if(q.type==='single'){ answers[q.id]=(answers[q.id]===key)?'':key; }
+  else {
+    let arr=answers[q.id].slice();
+    if(q.exclusiveKey&&key===q.exclusiveKey){ arr=(arr.indexOf(key)>=0)?[]:[key]; }
+    else { const i=arr.indexOf(key); if(i>=0) arr.splice(i,1); else arr.push(key); if(q.exclusiveKey){ const e=arr.indexOf(q.exclusiveKey); if(e>=0) arr.splice(e,1); } }
+    answers[q.id]=arr;
+  }
+  updateProgress(); renderQuestions();
+}
+
+function updateProgress(){
+  let c=0; QUESTIONS.forEach(q=>{ const v=answers[q.id]; if(q.type==='multi'){ if(v&&v.length>0) c++; } else if(v) c++; });
+  document.getElementById('cnt').textContent=c;
+  document.getElementById('fill').style.width=(c/QUESTIONS.length*100)+'%';
+  document.getElementById('genBtn').classList.toggle('on', c===QUESTIONS.length);
+}
+
+document.getElementById('resetBtn').onclick=function(){ answers=initAnswers(); updateProgress(); renderQuestions(); toast('已重置'); };
+document.getElementById('genBtn').onclick=function(){ generate(); };
+document.getElementById('redoBtn').onclick=function(){ document.getElementById('report').style.display='none'; document.getElementById('formView').style.display='block'; current=null; };
+document.getElementById('copyBtn').onclick=function(){ if(current) copyText(current.report.plainText); };
+document.getElementById('shareBtn').onclick=function(){
+  if(!current) return;
+  if(navigator.share){ navigator.share({ title:'声乐课时规划方案', text:current.report.plainText }).catch(function(){}); }
+  else copyText(current.report.plainText);
+};
+document.getElementById('imgBtn').onclick=function(){ if(current) makeImage(current.report); };
+
+// 历史
+const HK='vocal_history';
+function saveHistory(p){ try{ const list=JSON.parse(localStorage.getItem(HK)||'[]'); list.unshift({id:'r'+Date.now(),time:fmt(new Date()),direction:selTexts('Q1',p.answers.Q1),total:p.report.total,pkgLabel:p.report.pkgLabel,plainText:p.report.plainText,answers:p.answers}); if(list.length>30) list.length=30; localStorage.setItem(HK,JSON.stringify(list)); }catch(e){} }
+function fmt(d){ const p=n=>n<10?'0'+n:''+n; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+document.getElementById('histBtn').onclick=function(){
+  const list=JSON.parse(localStorage.getItem(HK)||'[]'); const box=document.getElementById('histList'); box.innerHTML='';
+  if(list.length===0){ box.innerHTML='<div style="color:#999;font-size:13px;text-align:center;padding:20px 0;">还没有保存的方案</div>'; }
+  list.forEach(function(it){
+    const row=document.createElement('div'); row.className='hist-item';
+    row.innerHTML='<div class="l"><div class="d">'+it.direction+' · '+it.pkgLabel+'</div><div class="t">'+it.time+'</div></div><div class="r">复制</div>';
+    row.querySelector('.r').onclick=function(e){ e.stopPropagation(); copyText(it.plainText); };
+    row.onclick=function(){ document.getElementById('histMask').classList.remove('show'); const rep=buildReport(it.answers); current={answers:it.answers,report:rep}; showReport(rep); };
+    box.appendChild(row);
+  });
+  document.getElementById('histMask').classList.add('show');
+};
+document.getElementById('histClose').onclick=function(){ document.getElementById('histMask').classList.remove('show'); };
+
+// 报告展示
+function showReport(report){
+  document.getElementById('formView').style.display='none';
+  document.getElementById('report').style.display='block';
+  document.getElementById('pkg').textContent=report.pkgLabel;
+  document.getElementById('pkgTip').textContent=report.aiEnhanced?'（AI 增强）':(report.isDefault?'（基准建议）':'');
+  const body=document.getElementById('reportBody'); body.innerHTML='';
+  parseBlocks(report.plainText).forEach(function(b){
+    let el;
+    if(b.type==='space') el=document.createElement('div'), el.className='sp';
+    else if(b.type==='title') el=tag('div','title',b.text);
+    else if(b.type==='h2') el=tag('div','h2',b.text);
+    else if(b.type==='h3') el=tag('div','h3',b.text);
+    else if(b.type==='glabel') el=tag('div','glabel',b.text);
+    else if(b.type==='bullet'){ el=document.createElement('div'); el.className='bullet'; el.innerHTML='<span class="d">•</span><span class="x">'+b.text+'</span>'; }
+    else if(b.type==='sub') el=tag('div','sub','– '+b.text);
+    else if(b.type==='check') el=tag('div','check',b.text);
+    else if(b.type==='warn') el=tag('div','warn',b.text);
+    else el=tag('div','txt',b.text);
+    body.appendChild(el);
+  });
+  window.scrollTo(0,0);
+}
+function tag(t,c,x){ const e=document.createElement(t); e.className=c; e.textContent=x; return e; }
+
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){ toast('已复制全文'); },function(){ fallbackCopy(t); }); }
+  else fallbackCopy(t);
+}
+function fallbackCopy(t){ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('已复制全文'); }catch(e){ toast('复制失败'); } document.body.removeChild(ta); }
+
+// 图片生成（canvas 长图）—— 信纸质感 + 手书体 + 老师落款
+function wrap(ctx,fontStr,text,maxWidth){
+  ctx.font=fontStr; const chars=Array.from(text); const lines=[]; let cur='';
+  for(let i=0;i<chars.length;i++){ const test=cur+chars[i]; if(ctx.measureText(test).width>maxWidth&&cur){ lines.push(cur); cur=chars[i]; } else cur=test; }
+  if(cur) lines.push(cur); return lines.length?lines:[''];
+}
+function cleanEmoji(t){
+  if(!t) return '';
+  // 去掉行首 emoji 及其后空白，避免某些字体把 emoji 渲染成"?"
+  return t.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{2B55}\u{FE0F}\s]+/gu,'').trim();
+}
+function makeImage(report){
+  const dpr=window.devicePixelRatio||2;
+  const cssW=Math.min(window.innerWidth-24,420);
+  const pad=22, frame=14, inner=pad+frame;
+  const meas=document.createElement('canvas').getContext('2d');
+  const HAND='"STKaiti","Kaiti SC","KaiTi","楷体","Xingkai SC",cursive';
+  const BODY='-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+  const C={ ink:'#3a3530', accent:'#b06a2c', green:'#5b8c3e', red:'#c0533b', muted:'#9a8e7e', frame:'#d8c8a8', line:'#e7dcc6' };
+  const font=function(sz,bold,hand){ return (bold?'bold ':'')+sz+'px '+(hand?HAND:BODY); };
+  const W=cssW-pad*2-frame*2;
+  const blocks=parseBlocks(report.plainText);
+  const L=[]; let y=inner+8;
+  function push(st,h){ st.h=h; y+=st.top; y+=h; L.push(st); }
+  blocks.forEach(function(b){
+    const t=b.text||'', ty=b.type;
+    if(ty==='title'){ push({kind:'title',text:cleanEmoji(t),top:4,h:42},0); }
+    else if(ty==='h2'){ push({kind:'h2',text:t,top:18},26); }
+    else if(ty==='h3'){ push({kind:'h3',text:t,top:12},22); }
+    else if(ty==='glabel'){ push({kind:'glabel',text:t,top:10},22); }
+    else if(ty==='bullet'){ const ls=wrap(meas,font(14,false,false),t,W-18); push({kind:'bullet',lines:ls,top:4},ls.length*21); }
+    else if(ty==='sub'){ const ls=wrap(meas,font(13,false,false),t,W-16); push({kind:'sub',lines:ls,top:3},ls.length*19); }
+    else if(ty==='check'){ const ls=wrap(meas,font(14,false,false),cleanEmoji(t),W-20); push({kind:'check',lines:ls,top:6},ls.length*21); }
+    else if(ty==='warn'){ const ls=wrap(meas,font(13.5,false,false),cleanEmoji(t),W-20); push({kind:'warn',lines:ls,top:7},ls.length*21); }
+    else if(ty==='txt'){
+      if(t.indexOf('📚')===0){ const ls=wrap(meas,font(15,true,true),cleanEmoji(t),W); push({kind:'total',lines:ls,top:10},ls.length*24); }
+      else if(t.indexOf('🤖')===0){ const ls=wrap(meas,font(12.5,false,false),cleanEmoji(t),W); push({kind:'note',lines:ls,top:5},ls.length*18); }
+      else if(t.indexOf('（')===0){ const ls=wrap(meas,font(12.5,false,false),t,W); push({kind:'note',lines:ls,top:5},ls.length*18); }
+      else { const ls=wrap(meas,font(14,false,false),t,W); push({kind:'txt',lines:ls,top:4},ls.length*21); }
+    }
+    else if(ty==='space'){ y+=8; }
+  });
+  const sigTop=18, sigH=46, dateStr=fmt(new Date());
+  const cssH=Math.ceil(y+frame+pad+sigTop+sigH);
+  const canvas=document.createElement('canvas'); canvas.width=cssW*dpr; canvas.height=cssH*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  // 纸面
+  const g=ctx.createLinearGradient(0,0,0,cssH); g.addColorStop(0,'#fdf9f0'); g.addColorStop(1,'#f7efe0');
+  ctx.fillStyle=g; ctx.fillRect(0,0,cssW,cssH);
+  ctx.strokeStyle=C.frame; ctx.lineWidth=1.5; ctx.strokeRect(frame,frame,cssW-frame*2,cssH-frame*2);
+  ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.strokeRect(frame+5,frame+5,cssW-frame*2-10,cssH-frame*2-10);
+  let dy=inner+8;
+  L.forEach(function(st){
+    dy+=st.top||0;
+    if(st.kind==='title'){
+      ctx.fillStyle=C.ink; ctx.font=font(22,true,true); ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(st.text, cssW/2, dy+st.h/2); ctx.textAlign='left';
+    }
+    else if(st.kind==='h2'){ ctx.fillStyle=C.ink; ctx.font=font(17,true,true); ctx.textBaseline='top'; ctx.fillText(st.text, inner, dy); }
+    else if(st.kind==='h3'){ ctx.fillStyle=C.accent; ctx.font=font(15,true,true); ctx.textBaseline='top'; ctx.fillText(st.text, inner, dy); }
+    else if(st.kind==='glabel'){ ctx.fillStyle=C.accent; ctx.font=font(15,true,true); ctx.textBaseline='top'; ctx.fillText(st.text, inner, dy); }
+    else if(st.kind==='total'){ ctx.fillStyle=C.accent; ctx.font=font(15,true,true); ctx.textBaseline='top'; st.lines.forEach(function(ln,i){ ctx.fillText(ln, inner, dy+i*24); }); }
+    else if(st.kind==='bullet'){ ctx.fillStyle=C.accent; ctx.font=font(13,true,false); ctx.textBaseline='top'; ctx.fillText('·', inner+4, dy+2);
+      ctx.fillStyle=C.ink; ctx.font=font(14,false,false); st.lines.forEach(function(ln,i){ ctx.fillText(ln, inner+18, dy+i*21); }); }
+    else if(st.kind==='sub'){ ctx.fillStyle=C.muted; ctx.font=font(13,false,false); ctx.textBaseline='top'; st.lines.forEach(function(ln,i){ ctx.fillText((i===0?'– ':'  ')+ln, inner+16, dy+i*19); }); }
+    else if(st.kind==='check'){ ctx.fillStyle=C.green; ctx.font=font(13,true,false); ctx.textBaseline='top'; ctx.fillText('·', inner+4, dy+1);
+      ctx.fillStyle=C.ink; ctx.font=font(14,false,false); st.lines.forEach(function(ln,i){ ctx.fillText(ln, inner+20, dy+i*21); }); }
+    else if(st.kind==='warn'){ ctx.fillStyle=C.red; ctx.font=font(13.5,false,false); ctx.textBaseline='top'; st.lines.forEach(function(ln,i){ ctx.fillText((i===0?'小提醒：':'')+ln, inner+2, dy+i*21); }); }
+    else if(st.kind==='note'){ ctx.fillStyle=C.muted; ctx.font=font(12.5,false,false); ctx.textBaseline='top'; st.lines.forEach(function(ln,i){ ctx.fillText(ln, inner, dy+i*18); }); }
+    else if(st.kind==='txt'){ ctx.fillStyle=C.ink; ctx.font=font(14,false,false); ctx.textBaseline='top'; st.lines.forEach(function(ln,i){ ctx.fillText(ln, inner, dy+i*21); }); }
+    dy+=st.h||0;
+  });
+  // 落款（老师手书感）
+  ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(inner, dy+sigTop-4); ctx.lineTo(cssW-inner, dy+sigTop-4); ctx.stroke();
+  ctx.fillStyle=C.ink; ctx.font=font(16,true,true); ctx.textBaseline='middle'; ctx.textAlign='right';
+  ctx.fillText('—— 蘑菇老师', cssW-inner, dy+sigTop+14);
+  ctx.fillStyle=C.muted; ctx.font=font(12,false,false); ctx.textAlign='left';
+  ctx.fillText(dateStr, inner, dy+sigTop+30);
+  ctx.textAlign='left';
+  const url=canvas.toDataURL('image/png');
+  document.getElementById('imgEl').src=url;
+  document.getElementById('imgDown').onclick=function(){ const a=document.createElement('a'); a.href=url; a.download='声乐课时规划.png'; a.click(); };
+  document.getElementById('imgMask').classList.add('show');
+}
+document.getElementById('imgClose').onclick=function(){ document.getElementById('imgMask').classList.remove('show'); };
+
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(function(){ t.style.display='none'; },1400); }
+
+// ====================== AI 增强 ======================
+const AIK='vocal_ai';
+const AI_PRESETS={ openrouter:{baseURL:'https://openrouter.ai/api/v1', model:'deepseek/deepseek-chat'},
+  deepseek:{baseURL:'https://api.deepseek.com/v1', model:'deepseek-chat'},
+  openai:{baseURL:'https://api.openai.com/v1', model:'gpt-4o-mini'},
+  custom:{baseURL:'', model:''} };
+function loadAI(){ try{ return Object.assign({enabled:false,provider:'openrouter',apiKey:'',model:'',baseURL:''}, JSON.parse(localStorage.getItem(AIK)||'{}')); }catch(e){ return {enabled:false,provider:'openrouter',apiKey:'',model:'',baseURL:''}; } }
+function saveAI(cfg){ localStorage.setItem(AIK, JSON.stringify(cfg)); }
+function applyPreset(p){ const c=AI_PRESETS[p]||AI_PRESETS.custom; document.getElementById('aiBase').value=c.baseURL||''; document.getElementById('aiModel').value=c.model||''; }
+
+document.getElementById('aiBtn').onclick=function(){
+  const c=loadAI();
+  document.getElementById('aiEnabled').checked=!!c.enabled;
+  document.getElementById('aiProvider').value=c.provider||'openrouter';
+  document.getElementById('aiKey').value=c.apiKey||'';
+  document.getElementById('aiModel').value=c.model||AI_PRESETS[c.provider||'openrouter'].model||'';
+  document.getElementById('aiBase').value=c.baseURL||AI_PRESETS[c.provider||'openrouter'].baseURL||'';
+  document.getElementById('aiMask').classList.add('show');
+};
+document.getElementById('aiProvider').onchange=function(e){ applyPreset(e.target.value); };
+document.getElementById('aiSave').onclick=function(){
+  const provider=document.getElementById('aiProvider').value;
+  const cfg={ enabled:document.getElementById('aiEnabled').checked,
+    provider:provider, apiKey:document.getElementById('aiKey').value.trim(),
+    model:document.getElementById('aiModel').value.trim()||(AI_PRESETS[provider].model||''),
+    baseURL:document.getElementById('aiBase').value.trim()||(AI_PRESETS[provider].baseURL||'') };
+  saveAI(cfg);
+  document.getElementById('aiMask').classList.remove('show');
+  toast(cfg.enabled&&cfg.apiKey?'AI 增强已开启':(cfg.enabled?'请先填写 API Key':'AI 增强已关闭'));
+};
+document.getElementById('aiClose').onclick=function(){ document.getElementById('aiMask').classList.remove('show'); };
+
+// 生成可读文本（给大模型看的评估摘要）
+function readableAnswers(ans){
+  const out={};
+  QUESTIONS.forEach(function(q){ out[q.title]=selTexts(q.id, ans[q.id]); });
+  return out;
+}
+
+// 调用大模型，返回 {lessons, reasons, comment}
+async function callAI(ans, ruleReport){
+  const cfg=loadAI();
+  if(!cfg.enabled || !cfg.apiKey) return null;
+  const baseURL=(cfg.baseURL||'').replace(/\/$/,'');
+  const model=cfg.model||'deepseek/deepseek-chat';
+  const sys='你是一位资深声乐教师，擅长根据试听课评估制定课时规划。请只输出 JSON，不要任何额外文字或 markdown。';
+  const user='试听课评估如下：\n'+JSON.stringify(readableAnswers(ans),null,2)+'\n\n规则引擎初步建议：'+ruleReport.pkgLabel+'。\n请结合声乐教学常识，返回 JSON：\n'+
+    '{\"lessons\": 整数(只能取 5/10/20/50 之一), \"reasons\": \"课时依据(一句中文)\", \"comment\": \"给学生的个性化点评(2-4句中文,专业、鼓励、不夸大效果)\"}。\n'+
+    '要求：lessons 不要低于问题组合应有的常识下限（例如音准与气息问题并存通常至少10节）；comment 要针对该生的具体短板给出可执行的练习方向。';
+  const body={ model:model, messages:[{role:'system',content:sys},{role:'user',content:user}], temperature:0.3,
+    response_format:{ type:'json_object' } };
+  const resp=await fetch(baseURL+'/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+cfg.apiKey },
+    body:JSON.stringify(body)
+  });
+  if(!resp.ok) throw new Error('HTTP '+resp.status);
+  const data=await resp.json();
+  const content=(data.choices&&data.choices[0]&&data.choices[0].message)?data.choices[0].message.content:'';
+  return JSON.parse(content);
+}
+
+// 把 AI 结果合并进报告：以 max(规则, AI) 为总课时，并追加 AI 点评
+function applyAI(ans, total, ai){
+  const base=buildReport(ans, { total:total });
+  const lines=base.plainText.split('\n');
+  const idx=lines.findIndex(function(l){ return l.indexOf('## 预期效果')===0; });
+  const sec=[]; sec.push('## AI 老师点评'); sec.push('');
+  if(ai.reasons) sec.push('🤖 课时依据：'+ai.reasons);
+  if(ai.comment) sec.push(ai.comment);
+  if(idx>=0) lines.splice(idx,0,sec.join('\n')); else lines.push('',sec.join('\n'));
+  const plain=lines.join('\n');
+  return { total:total, pkgLabel:total+'节', isDefault:base.isDefault, smartRaised:base.smartRaised, smartNote:base.smartNote, plainText:plain, aiEnhanced:true };
+}
+
+async function generate(){
+  let c=0; QUESTIONS.forEach(q=>{ const v=answers[q.id]; if(q.type==='multi'){ if(v&&v.length>0) c++; } else if(v) c++; });
+  if(c<QUESTIONS.length){ toast('还有 '+(QUESTIONS.length-c)+' 题未作答'); return; }
+  const ruleReport=buildReport(answers);
+  let finalReport=ruleReport;
+  const cfg=loadAI();
+  if(cfg.enabled && cfg.apiKey){
+    toast('AI 增强生成中…');
+    try{
+      const ai=await callAI(answers, ruleReport);
+      if(ai && ai.lessons){
+        const total=snapPackage(Math.max(ruleReport.total, parseInt(ai.lessons,10)||ruleReport.total));
+        finalReport=applyAI(answers, total, ai);
+      }
+    }catch(e){ toast('AI 调用失败，已用智能规则'); }
+  }
+  current={ answers:JSON.parse(JSON.stringify(answers)), report:finalReport };
+  showReport(finalReport); saveHistory(current);
+}
+
+// 初始化
+const _tot=document.getElementById('tot'); if(_tot) _tot.textContent=QUESTIONS.length;
+renderQuestions(); updateProgress();
+</script>
+</body>
+</html>
