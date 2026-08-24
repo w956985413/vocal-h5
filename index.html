@@ -167,7 +167,8 @@
     <div class="set-row">
       <label>服务商（预设接口地址）</label>
       <select id="aiProvider">
-        <option value="openrouter">OpenRouter（推荐，免费/廉价模型多）</option>
+        <option value="siliconflow">硅基流动 SiliconFlow（国内，注册送 14 元代金券）</option>
+        <option value="openrouter">OpenRouter（免费模型多，国内偶尔不稳）</option>
         <option value="deepseek">DeepSeek</option>
         <option value="openai">OpenAI</option>
         <option value="custom">自定义</option>
@@ -620,7 +621,8 @@ function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.
 
 // ====================== AI 增强 ======================
 const AIK='vocal_ai';
-const AI_PRESETS={ openrouter:{baseURL:'https://openrouter.ai/api/v1', model:'deepseek/deepseek-chat'},
+const AI_PRESETS={ siliconflow:{baseURL:'https://api.siliconflow.cn/v1', model:'deepseek-ai/DeepSeek-V3'},
+  openrouter:{baseURL:'https://openrouter.ai/api/v1', model:'deepseek/deepseek-chat:free'},
   deepseek:{baseURL:'https://api.deepseek.com/v1', model:'deepseek-chat'},
   openai:{baseURL:'https://api.openai.com/v1', model:'gpt-4o-mini'},
   custom:{baseURL:'', model:''} };
